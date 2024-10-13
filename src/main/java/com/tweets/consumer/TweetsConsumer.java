@@ -2,13 +2,17 @@ package com.tweets.consumer;
 
 import java.time.LocalDateTime;
 
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.jboss.logging.MDC;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Service;
 
 import com.tweets.datamodel.Tweet;
 import com.tweets.repository.TweetsRepository;
+import com.tweets.util.AppConstants;
 import com.tweets.util.GsonUtils;
+import com.tweets.util.SystemContext;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -20,9 +24,10 @@ public class TweetsConsumer {
 	private TweetsRepository tweetsRepo;
 
 	@KafkaListener(topics = "tweets")
-	public void listen(String message) {
-		log.info("New message received {}", message);
-		Tweet tweet = GsonUtils.getGson().fromJson(message, Tweet.class);
+	public void listen(ConsumerRecord<String, String> record) {
+		initCorrelationId(record);
+		log.info("New record received {}", GsonUtils.getGson().toJson(record));
+		Tweet tweet = GsonUtils.getGson().fromJson(record.value(), Tweet.class);
 		if (tweet.getId() != null) {
 			// Edit tweet
 			String userId = tweet.getUserId();
@@ -46,5 +51,16 @@ public class TweetsConsumer {
 			Tweet savedTweet = tweetsRepo.save(tweet);
 			log.info("Tweet saved with id {}", savedTweet.getId());
 		}
+	}
+
+	private void initCorrelationId(ConsumerRecord<String, String> record) {
+		String parentCorrelationId = new String(
+				record.headers().lastHeader(AppConstants.PARENT_CORRELATION_ID_HEADER.getValue()).value());
+		String childCorrelationId = new String(
+				record.headers().lastHeader(AppConstants.CHILD_CORRELATION_ID_HEADER.getValue()).value());
+		SystemContext.setParentCorrelationId(parentCorrelationId);
+		SystemContext.setChildCorrelationId(childCorrelationId);
+		MDC.put(AppConstants.MDC_PARENT_CORRELATION_ID_KEY.getValue(), parentCorrelationId);
+		MDC.put(AppConstants.CHILD_CORRELATION_ID_HEADER.getValue(), childCorrelationId);
 	}
 }
