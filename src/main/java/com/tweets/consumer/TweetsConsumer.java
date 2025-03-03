@@ -1,6 +1,7 @@
 package com.tweets.consumer;
 
-import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.jboss.logging.MDC;
@@ -23,34 +24,20 @@ public class TweetsConsumer {
 	@Autowired
 	private TweetsRepository tweetsRepo;
 
-	@KafkaListener(topics = "tweets")
-	public void listen(ConsumerRecord<String, String> record) {
-		initCorrelationId(record);
-		log.info("New record received {}", GsonUtils.getGson().toJson(record));
-		Tweet tweet = GsonUtils.getGson().fromJson(record.value(), Tweet.class);
-		if (tweet.getId() != null) {
-			// Edit tweet
-			String userId = tweet.getUserId();
-			Tweet dbTweet = tweetsRepo.findById(tweet.getId()).orElse(null);
-			if (dbTweet != null) {
-				if (!dbTweet.getUserId().equals(userId)) {
-					throw new RuntimeException(String.format("The tweet with id %s does not belong to the userid %s",
-							String.valueOf(tweet.getId()), userId));
-				} else {
-					dbTweet.setTweet(tweet.getTweet());
-					dbTweet.setProcessedOn(LocalDateTime.now());
-					tweetsRepo.save(dbTweet);
-					log.info("Tweet with id {} edited successfully", dbTweet.getId());
-				}
-			} else {
-				throw new RuntimeException(
-						String.format("The tweet with id %s does not exist", String.valueOf(tweet.getId())));
+	@KafkaListener(topics = "tweets.to-persist")
+	public void listen(List<ConsumerRecord<String, String>> recordsList) {
+		List<Tweet> tweetsToSave = new ArrayList<>();
+		for (ConsumerRecord<String, String> record : recordsList) {
+			try {
+				initCorrelationId(record);
+				log.info("New record received {}", GsonUtils.getGson().toJson(record));
+				Tweet tweet = GsonUtils.getGson().fromJson(record.value(), Tweet.class);
+				tweetsToSave.add(tweet);
+			} catch (Exception e) {
+				log.error("Exception while saving tweet", e);
 			}
-		} else {
-			// Save new tweet
-			Tweet savedTweet = tweetsRepo.save(tweet);
-			log.info("Tweet saved with id {}", savedTweet.getId());
 		}
+		tweetsRepo.saveAll(tweetsToSave);
 	}
 
 	private void initCorrelationId(ConsumerRecord<String, String> record) {

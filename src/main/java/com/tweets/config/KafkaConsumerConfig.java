@@ -21,6 +21,7 @@ public class KafkaConsumerConfig {
 		config.put(ConsumerConfig.GROUP_ID_CONFIG, "tweets-consumer-group-1");
 		config.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
 		config.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
+		config.put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, 10);
 		return config;
 	}
 
@@ -33,6 +34,7 @@ public class KafkaConsumerConfig {
 	public ConcurrentKafkaListenerContainerFactory<String, String> kafkaListenerContainerFactory() {
 		ConcurrentKafkaListenerContainerFactory<String, String> factory = new ConcurrentKafkaListenerContainerFactory<>();
 		factory.setConsumerFactory(consumerFactory());
+		factory.setBatchListener(true);
 		return factory;
 	}
 }
