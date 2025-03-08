@@ -80,5 +80,6 @@ dependencies {
 	implementation 'org.springframework.kafka:spring-kafka:2.8.11'
 	implementation 'org.springframework.cloud:spring-cloud-starter-sleuth'
     implementation 'org.springframework.cloud:spring-cloud-sleuth-zipkin'
+	implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
     
 }

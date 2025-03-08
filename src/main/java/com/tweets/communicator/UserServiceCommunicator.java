@@ -20,7 +20,7 @@ import com.tweets.datamodel.User;
 @Component
 public class UserServiceCommunicator {
 	
-	private static final String HOST = "http://localhost:8080";
+	private static final String HOST = "http://localhost:19000";
 	
 	public List<User> getUsersDetails(List<String> userIds) {
 		JSONObject request = new JSONObject();
